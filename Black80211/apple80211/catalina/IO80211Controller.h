@@ -231,6 +231,7 @@ public:
     virtual bool attachInterface(IONetworkInterface **, bool attach = true) APPLE_KEXT_OVERRIDE;
     virtual void stop(IOService *) override;
     virtual void free() override;
+    virtual bool terminate(unsigned int) APPLE_KEXT_OVERRIDE;
     virtual bool init(OSDictionary *) override;
     virtual IOService* getProvider(void) const APPLE_KEXT_OVERRIDE;
 /*

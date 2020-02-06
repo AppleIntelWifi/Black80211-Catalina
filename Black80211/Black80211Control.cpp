@@ -133,7 +133,7 @@ bool Black80211Control::start(IOService* provider) {
     }
      */
     if (!attachInterface((IONetworkInterface**) &fInterface, true)) {
-        IOLog("Black80211: Failed to attach interface!");
+        kprintf("Black80211: Failed to attach interface!");
         ReleaseAll();
         return false;
     }
@@ -147,7 +147,7 @@ bool Black80211Control::start(IOService* provider) {
 }
 
 IOReturn Black80211Control::enable(IONetworkInterface* iface) {
-    IOLog("Black80211: enable");
+    kprintf("Black80211: enable");
     IOMediumType mediumType = kIOMediumIEEE80211Auto;
     IONetworkMedium *medium = IONetworkMedium::getMediumWithType(mediumDict, mediumType);
     setLinkStatus(kIONetworkLinkActive | kIONetworkLinkValid, medium);
@@ -160,7 +160,7 @@ IOReturn Black80211Control::enable(IONetworkInterface* iface) {
 }
 
 IOReturn Black80211Control::disable(IONetworkInterface* iface) {
-    IOLog("Black80211: disable");
+    kprintf("Black80211: disable");
     return kIOReturnSuccess;
 }
 
@@ -243,7 +243,7 @@ if (REQ_TYPE == SIOCSA80211) { \
     ret = set##REQ(interface, (struct DATA_TYPE* )data); \
 }
     
-    IOLog("Black80211: IOCTL %s(%d) %s",
+    kprintf("Black80211: IOCTL %s(%d) %s",
           isGet ? "get" : "set",
           request_number,
           IOCTL_NAMES[request_number]);
@@ -337,7 +337,7 @@ if (REQ_TYPE == SIOCSA80211) { \
         case APPLE80211_IOC_THERMAL_THROTTLING: // 111
             break;
         default:
-            IOLog("Black80211: unhandled ioctl %s %d", IOCTL_NAMES[request_number], request_number);
+            kprintf("Black80211: unhandled ioctl %s %d", IOCTL_NAMES[request_number], request_number);
             break;
     }
 #undef IOCTL
@@ -346,7 +346,7 @@ if (REQ_TYPE == SIOCSA80211) { \
 }
 
 bool Black80211Control::configureInterface(IONetworkInterface *netif) {
-    IOLog("Black80211: Configure interface");
+    kprintf("Black80211: Configure interface");
     if (!super::configureInterface(netif)) {
         return false;
     }

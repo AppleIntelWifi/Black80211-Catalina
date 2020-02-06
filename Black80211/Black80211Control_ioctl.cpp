@@ -45,17 +45,19 @@ const char beacon_ie[] = "\x00\x0a\x55" \
 
 IOReturn Black80211Control::getSSID(IO80211Interface *interface,
                                     struct apple80211_ssid_data *sd) {
-    return kIOReturnError;
     
     bzero(sd, sizeof(*sd));
     sd->version = APPLE80211_VERSION;
     strncpy((char*)sd->ssid_bytes, fake_ssid, sizeof(sd->ssid_bytes));
     sd->ssid_len = (uint32_t)strlen(fake_ssid);
+
     return kIOReturnSuccess;
 }
 
 IOReturn Black80211Control::setSSID(IO80211Interface *interface,
                                     struct apple80211_ssid_data *sd) {
+    
+    fInterface->postMessage(APPLE80211_M_SSID_CHANGED);
     return kIOReturnSuccess;
 }
 
@@ -77,9 +79,9 @@ IOReturn Black80211Control::getAUTH_TYPE(IO80211Interface *interface,
 
 IOReturn Black80211Control::getCHANNEL(IO80211Interface *interface,
                                        struct apple80211_channel_data *cd) {
-    return kIOReturnError;
+    //return kIOReturnError;
     
-    memset(cd, sizeof(apple80211_channel_data), 0);
+    memset(cd, 0, sizeof(apple80211_channel_data));
     //bzero(cd, sizeof(apple80211_channel_data));
     
     cd->version = APPLE80211_VERSION;
@@ -93,7 +95,6 @@ IOReturn Black80211Control::getCHANNEL(IO80211Interface *interface,
 
 IOReturn Black80211Control::getTXPOWER(IO80211Interface *interface,
                                        struct apple80211_txpower_data *txd) {
-    return kIOReturnError;
 
     txd->version = APPLE80211_VERSION;
     txd->txpower = 100;
@@ -106,8 +107,6 @@ IOReturn Black80211Control::getTXPOWER(IO80211Interface *interface,
 //
 
 IOReturn Black80211Control::getRATE(IO80211Interface *interface, struct apple80211_rate_data *rd) {
-    return kIOReturnError;
-
     rd->version = APPLE80211_VERSION;
     rd->num_radios = 1;
     rd->rate[0] = 54;
@@ -120,7 +119,6 @@ IOReturn Black80211Control::getRATE(IO80211Interface *interface, struct apple802
 
 IOReturn Black80211Control::getBSSID(IO80211Interface *interface,
                                      struct apple80211_bssid_data *bd) {
-    return kIOReturnError;
     
     bzero(bd, sizeof(*bd));
     
@@ -146,7 +144,7 @@ IOReturn Black80211Control::setSCAN_REQ(IO80211Interface *interface,
         return kIOReturnBusy;
     }
     dev->setState(APPLE80211_S_SCAN);
-    IOLog("Black80211. Scan requested. Type: %u\n"
+    kprintf("Black80211. Scan requested. Type: %u\n"
           "BSS Type: %u\n"
           "PHY Mode: %u\n"
           "Dwell time: %u\n"
@@ -240,7 +238,7 @@ IOReturn Black80211Control::getSTATE(IO80211Interface *interface,
 
 IOReturn Black80211Control::setSTATE(IO80211Interface *interface,
                                      struct apple80211_state_data *sd) {
-    IOLog("Black82011: Setting state: %u", sd->state);
+    kprintf("Black82011: Setting state: %u", sd->state);
     dev->setState(sd->state);
     return kIOReturnSuccess;
 }
@@ -276,7 +274,6 @@ IOReturn Black80211Control::getOP_MODE(IO80211Interface *interface,
 
 IOReturn Black80211Control::getRSSI(IO80211Interface *interface,
                                     struct apple80211_rssi_data *rd) {
-    return kIOReturnError;
     
     bzero(rd, sizeof(*rd));
     rd->version = APPLE80211_VERSION;
@@ -293,7 +290,6 @@ IOReturn Black80211Control::getRSSI(IO80211Interface *interface,
 
 IOReturn Black80211Control::getNOISE(IO80211Interface *interface,
                                      struct apple80211_noise_data *nd) {
-    return kIOReturnError;
     
     bzero(nd, sizeof(*nd));
     nd->version = APPLE80211_VERSION;
@@ -333,7 +329,7 @@ IOReturn Black80211Control::setPOWER(IO80211Interface *interface,
     if (pd->num_radios > 0) {
         dev->setPowerState(pd->power_state[0]);
     }
-    fInterface->postMessage(APPLE80211_M_POWER_CHANGED, NULL, 0);
+    //fInterface->postMessage(APPLE80211_M_POWER_CHANGED, NULL, 0);
     
     return kIOReturnSuccess;
 }
@@ -344,7 +340,9 @@ IOReturn Black80211Control::setPOWER(IO80211Interface *interface,
 
 IOReturn Black80211Control::setASSOCIATE(IO80211Interface *interface,
                                          struct apple80211_assoc_data *ad) {
-    return kIOReturnError;
+    IOLog("Black80211::setAssociate %s", ad->ad_ssid);
+    fInterface->setLinkState(IO80211LinkState::kIO80211NetworkLinkUp, 0);
+    return kIOReturnSuccess;
 }
 
 //

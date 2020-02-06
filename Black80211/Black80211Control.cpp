@@ -31,6 +31,43 @@ void Black80211Control::free() {
     super::free();
 }
 
+IOService* Black80211Control::probe(IOService *provider, SInt32 *score) {
+    IOLog("Black80211: probing");
+    
+    super::probe(provider, score);
+    
+    fPciDevice = OSDynamicCast(IOPCIDevice, provider);
+    if (!fPciDevice) {
+        IOLog("Black80211: Provider is not PCI device");
+        fPciDevice = NULL;
+        return NULL;
+    }
+    UInt16 fDeviceId = fPciDevice->configRead16(kIOPCIConfigDeviceID);
+    UInt16 fSubsystemId = fPciDevice->configRead16(kIOPCIConfigSubSystemID);
+    
+    if(fDeviceId != 0x24FD) {
+        IOLog("Black80211: not a 8265 device");
+        fPciDevice = NULL;
+        return NULL;
+    }
+    
+    fPciDevice->retain();
+    
+    return this;
+}
+
+bool Black80211Control::createWorkLoop() {
+    if(!fWorkloop) {
+        fWorkloop = IO80211WorkLoop::workLoop();
+    }
+    
+    return (fWorkloop != NULL);
+}
+
+IOWorkLoop* Black80211Control::getWorkLoop() const {
+    return fWorkloop;
+}
+
 bool Black80211Control::start(IOService* provider) {
     IOLog("Black80211: Start");
     if (!super::start(provider)) {
@@ -39,14 +76,7 @@ bool Black80211Control::start(IOService* provider) {
         return false;
     }
     
-    fPciDevice = OSDynamicCast(IOPCIDevice, provider);
-    if (!fPciDevice) {
-        IOLog("Black80211: Failed to cast provider to IOPCIDevice!");
-        ReleaseAll();
-        return false;
-    }
-    
-    fWorkloop = (IO80211WorkLoop *)getWorkLoop();
+    //fWorkloop = (IO80211WorkLoop *)getWorkLoop();
     if (!fWorkloop) {
         IOLog("Black80211: Failed to get workloop!");
         ReleaseAll();
@@ -67,14 +97,6 @@ bool Black80211Control::start(IOService* provider) {
     }
     
     fCommandGate->enable();
-    
-    if (!attachInterface((IONetworkInterface**) &fInterface, true)) {
-        IOLog("Black80211: Failed to attach interface!");
-        ReleaseAll();
-        return false;
-    }
-    
-    fInterface->registerService();
     
     mediumDict = OSDictionary::withCapacity(MEDIUM_TYPE_INVALID + 1);
     addMediumType(kIOMediumIEEE80211None,  0,  MEDIUM_TYPE_NONE);
@@ -103,14 +125,43 @@ bool Black80211Control::start(IOService* provider) {
         return false;
     }
     
+    /*
     if (!setLinkStatus(kIONetworkLinkValid, mediumTable[MEDIUM_TYPE_AUTO])) {
         IOLog("Black80211: Failed to set link status!");
         ReleaseAll();
         return false;
     }
-
+     */
+    if (!attachInterface((IONetworkInterface**) &fInterface, true)) {
+        IOLog("Black80211: Failed to attach interface!");
+        ReleaseAll();
+        return false;
+    }
+        
+    
+    fInterface->registerService();
     registerService();
+
+    
     return true;
+}
+
+IOReturn Black80211Control::enable(IONetworkInterface* iface) {
+    IOLog("Black80211: enable");
+    IOMediumType mediumType = kIOMediumIEEE80211Auto;
+    IONetworkMedium *medium = IONetworkMedium::getMediumWithType(mediumDict, mediumType);
+    setLinkStatus(kIONetworkLinkActive | kIONetworkLinkValid, medium);
+    
+    if(fInterface) {
+        fInterface->postMessage(1);
+    }
+    
+    return kIOReturnSuccess;
+}
+
+IOReturn Black80211Control::disable(IONetworkInterface* iface) {
+    IOLog("Black80211: disable");
+    return kIOReturnSuccess;
 }
 
 bool Black80211Control::addMediumType(UInt32 type, UInt32 speed, UInt32 code, char* name) {
@@ -162,12 +213,13 @@ IOReturn Black80211Control::getHardwareAddressForInterface(IO80211Interface* net
     return getHardwareAddress(addr);
 }
 
-SInt32 Black80211Control::apple80211Request(UInt32 request_type,
+SInt32 Black80211Control::apple80211Request(unsigned int request_type,
                                             int request_number,
                                             IO80211Interface* interface,
                                             void* data) {
     if (request_type != SIOCGA80211 && request_type != SIOCSA80211) {
         IOLog("Black80211: Invalid IOCTL request type: %u", request_type);
+        IOLog("Expected either %lu or %lu", SIOCGA80211, SIOCSA80211);
         return kIOReturnError;
     }
 
@@ -269,19 +321,41 @@ if (REQ_TYPE == SIOCSA80211) { \
         case APPLE80211_IOC_COUNTRY_CODE: // 51
             IOCTL_GET(request_type, COUNTRY_CODE, apple80211_country_code_data);
             break;
+        case APPLE80211_IOC_RADIO_INFO:
+            IOCTL_GET(request_type, RADIO_INFO, apple80211_radio_info_data);
+            break;
         case APPLE80211_IOC_MCS: // 57
             IOCTL_GET(request_type, MCS, apple80211_mcs_data);
             break;
         case APPLE80211_IOC_WOW_PARAMETERS: // 69
             break;
+        case APPLE80211_IOC_ROAM_THRESH:
+            IOCTL_GET(request_type, ROAM_THRESH, apple80211_roam_threshold_data);
+            break;
         case APPLE80211_IOC_TX_CHAIN_POWER: // 108
             break;
         case APPLE80211_IOC_THERMAL_THROTTLING: // 111
+            break;
+        default:
+            IOLog("Black80211: unhandled ioctl %s %d", IOCTL_NAMES[request_number], request_number);
             break;
     }
 #undef IOCTL
     
     return ret;
+}
+
+bool Black80211Control::configureInterface(IONetworkInterface *netif) {
+    IOLog("Black80211: Configure interface");
+    if (!super::configureInterface(netif)) {
+        return false;
+    }
+
+    return true;
+}
+
+IO80211Interface* Black80211Control::getNetworkInterface() {
+    return fInterface;
 }
 
 UInt32 Black80211Control::outputPacket(mbuf_t m, void* param) {

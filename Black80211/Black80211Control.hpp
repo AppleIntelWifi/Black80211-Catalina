@@ -46,23 +46,31 @@ class Black80211Control : public IO80211Controller {
     OSDeclareDefaultStructors(Black80211Control)
     
 public:
-    virtual bool init(OSDictionary* parameters) APPLE_KEXT_OVERRIDE;
-    virtual void free() APPLE_KEXT_OVERRIDE;
-    virtual bool start(IOService* provider) APPLE_KEXT_OVERRIDE;
-    virtual void stop(IOService* provider) APPLE_KEXT_OVERRIDE;
+    bool init(OSDictionary* parameters) APPLE_KEXT_OVERRIDE;
+    void free() APPLE_KEXT_OVERRIDE;
+    bool start(IOService* provider) APPLE_KEXT_OVERRIDE;
+    void stop(IOService* provider) APPLE_KEXT_OVERRIDE;
+    IOService* probe(IOService* provider, SInt32* score) override;
     
-    SInt32 apple80211Request(UInt32 request_type, int request_number, IO80211Interface* interface, void* data);
-    virtual UInt32 outputPacket (mbuf_t m, void* param);
+    SInt32 apple80211Request(unsigned int request_type, int request_number, IO80211Interface* interface, void* data) override;
+    UInt32 outputPacket (mbuf_t m, void* param) override;
     IOReturn getMaxPacketSize(UInt32* maxSize) const;
     const OSString* newVendorString() const;
     const OSString* newModelString() const;
     const OSString* newRevisionString() const;
-    IOReturn getHardwareAddressForInterface(IO80211Interface* netif, IOEthernetAddress* addr);
-    IOReturn getHardwareAddress(IOEthernetAddress* addr);
-    virtual IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode);
-    virtual IOReturn setMulticastMode(IOEnetMulticastMode mode);
-    virtual IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len);
-    virtual SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled, UInt32 dlt);
+    IOReturn enable(IONetworkInterface *netif) override;
+    IOReturn disable(IONetworkInterface *netif) override;
+    bool configureInterface(IONetworkInterface *netif) override;
+    IO80211Interface* getNetworkInterface() override;
+    IOReturn getHardwareAddressForInterface(IO80211Interface* netif, IOEthernetAddress* addr) override;
+    IOReturn getHardwareAddress(IOEthernetAddress* addr) override;
+    IOReturn setPromiscuousMode(IOEnetPromiscuousMode mode) override;
+    IOReturn setMulticastMode(IOEnetMulticastMode mode) override;
+    IOReturn setMulticastList(IOEthernetAddress* addr, UInt32 len) override;
+    SInt32 monitorModeSetEnabled(IO80211Interface* interface, bool enabled, UInt32 dlt) override;
+    
+    bool createWorkLoop() override;
+    IOWorkLoop* getWorkLoop() const override;
     
 protected:
     IO80211Interface* getInterface();
@@ -121,6 +129,8 @@ private:
     IOReturn getCOUNTRY_CODE(IO80211Interface* interface, struct apple80211_country_code_data* cd);
     // 57 - MCS
     IOReturn getMCS(IO80211Interface* interface, struct apple80211_mcs_data* md);
+    IOReturn getROAM_THRESH(IO80211Interface* interface, struct apple80211_roam_threshold_data* md);
+    IOReturn getRADIO_INFO(IO80211Interface* interface, struct apple80211_radio_info_data* md);
     
     
     inline void ReleaseAll() {

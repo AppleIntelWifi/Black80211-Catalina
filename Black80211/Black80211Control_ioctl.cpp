@@ -79,7 +79,8 @@ IOReturn Black80211Control::getCHANNEL(IO80211Interface *interface,
                                        struct apple80211_channel_data *cd) {
     return kIOReturnError;
     
-    bzero(cd, sizeof(*cd));
+    memset(cd, sizeof(apple80211_channel_data), 0);
+    //bzero(cd, sizeof(apple80211_channel_data));
     
     cd->version = APPLE80211_VERSION;
     cd->channel = fake_channel;
@@ -129,7 +130,7 @@ IOReturn Black80211Control::getBSSID(IO80211Interface *interface,
 }
 
 static IOReturn scanAction(OSObject *target, void *arg0, void *arg1, void *arg2, void *arg3) {
-    IOSleep(200);
+    IOSleep(2000);
     IO80211Interface *iface = (IO80211Interface *)arg0;
     FakeDevice *dev = (FakeDevice*)arg1;
     iface->postMessage(APPLE80211_M_SCAN_DONE);
@@ -332,6 +333,7 @@ IOReturn Black80211Control::setPOWER(IO80211Interface *interface,
     if (pd->num_radios > 0) {
         dev->setPowerState(pd->power_state[0]);
     }
+    fInterface->postMessage(APPLE80211_M_POWER_CHANGED, NULL, 0);
     
     return kIOReturnSuccess;
 }
@@ -433,5 +435,18 @@ IOReturn Black80211Control::getCOUNTRY_CODE(IO80211Interface *interface,
 IOReturn Black80211Control::getMCS(IO80211Interface* interface, struct apple80211_mcs_data* md) {
     md->version = APPLE80211_VERSION;
     md->index = APPLE80211_MCS_INDEX_AUTO;
+    return kIOReturnSuccess;
+}
+
+IOReturn Black80211Control::getROAM_THRESH(IO80211Interface* interface, struct apple80211_roam_threshold_data* md) {
+    md->threshold = 1000;
+    md->count = 0;
+    return kIOReturnSuccess;
+}
+
+IOReturn Black80211Control::getRADIO_INFO(IO80211Interface* interface, struct apple80211_radio_info_data* md)
+{
+    md->version = 1;
+    md->count = 1;
     return kIOReturnSuccess;
 }

@@ -21,4 +21,11 @@
 #include "apple80211/high_sierra/IO80211Interface.h"
 #endif
 
+#ifdef CATALINA
+#include "apple80211/catalina/IO80211Controller.h"
+#include "apple80211/catalina/IO80211WorkLoop.h"
+#include "apple80211/catalina/IO80211Interface.h"
+#endif
+
+
 #endif /* apple80211_h */
